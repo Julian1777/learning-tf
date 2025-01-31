@@ -1,0 +1,3 @@
+tensorflow==2.18.0
+matplotlib==3.7.1
+ipython==8.10.0
