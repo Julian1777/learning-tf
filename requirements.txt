@@ -3,3 +3,4 @@ matplotlib==3.7.1
 ipython==8.10.0
 numpy==1.26.4
 pandas
+scikit-learn
