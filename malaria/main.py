@@ -41,4 +41,13 @@ plt.show()
 
 
 #DATA PROCESSING
+IM_SIZE = 224
+def resize_rescale(image, label):
+    return tf.image.resize(image, (IM_SIZE, IM_SIZE))/ 225.0, label
 
+train_dataset = train_dataset.map(resize_rescale)
+
+for image,label in train_dataset.take(1):
+    print(image, label)
+
+train_dataset = train_dataset.shuffle(buffer_size = 8, reshuffle_each_itteration = True).batch(32).prefetch(tf.data.AUTOTUNE)
