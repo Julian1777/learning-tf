@@ -1,7 +1,12 @@
 import tensorflow as tf
 import numpy as np
+import tensorflow
 import tensorflow_datasets as tfds
 import matplotlib.pyplot as plt
+from tensorflow.keras.layers import Conv2D, MaxPool2D, Dense, Flatten, InputLayer, Rescaling, Resizing, Normalization
+from tensorflow.keras.layers import Layer
+from tensorflow.keras.models import Model
+from tensorflow.keras.optimizers import Adam
 
 #LOADING DATASET AND SPLITTING INTO TRAIN VAL AND TEST
 
@@ -50,4 +55,28 @@ train_dataset = train_dataset.map(resize_rescale)
 for image,label in train_dataset.take(1):
     print(image, label)
 
-train_dataset = train_dataset.shuffle(buffer_size = 8, reshuffle_each_itteration = True).batch(32).prefetch(tf.data.AUTOTUNE)
+train_dataset = train_dataset.shuffle(buffer_size = 8, reshuffle_each_iteration=True).batch(32).prefetch(tf.data.AUTOTUNE)
+
+#MODEL CREATION
+
+normalizer = Normalization()
+
+model = tf.keras.Sequential([
+    InputLayer(input_shape = (IM_SIZE, IM_SIZE, 3)),
+
+    Conv2D(filters = 6, kernel_size=5, strides=1, padding='valid', activation='sigmoid'),
+    MaxPool2D(pool_size = 2, strides = 2),
+
+    Conv2D(filters = 16, kernel_size=5, strides=1, padding='valid', activation='sigmoid'),
+    MaxPool2D(pool_size = 2, strides = 2),
+
+    Flatten(),
+
+    Dense(100, activation="sigmoid"),
+
+    Dense(10, activation="sigmoid"),
+
+    Dense(2, activation="sigmoid"),
+])
+
+print(model.summary())
