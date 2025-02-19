@@ -3,10 +3,11 @@ import numpy as np
 import tensorflow
 import tensorflow_datasets as tfds
 import matplotlib.pyplot as plt
-from tensorflow.keras.layers import Conv2D, MaxPool2D, Dense, Flatten, InputLayer, Rescaling, Resizing, Normalization
-from tensorflow.keras.layers import Layer
-from tensorflow.keras.models import Model
+from tensorflow.keras import datasets, layers, models, losses
+from tensorflow.keras.layers import Conv2D, MaxPool2D, Dense, Flatten, InputLayer, Normalization
+from tensorflow.keras.losses import BinaryCrossentropy
 from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.metrics import RootMeanSquaredError
 
 #LOADING DATASET AND SPLITTING INTO TRAIN VAL AND TEST
 
@@ -61,7 +62,7 @@ train_dataset = train_dataset.shuffle(buffer_size = 8, reshuffle_each_iteration=
 
 normalizer = Normalization()
 
-model = tf.keras.Sequential([
+lenet_model = tf.keras.Sequential([
     InputLayer(input_shape = (IM_SIZE, IM_SIZE, 3)),
 
     Conv2D(filters = 6, kernel_size=5, strides=1, padding='valid', activation='sigmoid'),
@@ -76,7 +77,17 @@ model = tf.keras.Sequential([
 
     Dense(10, activation="sigmoid"),
 
-    Dense(2, activation="sigmoid"),
+    Dense(1, activation="sigmoid"),
 ])
 
-print(model.summary())
+print(lenet_model.summary())
+
+lenet_model.compile(
+    optimizer = Adam(learning_rate = 0.01),
+    loss = BinaryCrossentropy(),
+    #metric = RootMeanSquaredError()
+)
+
+history = lenet_model.fit(train_dataset, validation_data=val_dataset, epochs = 100, verbose = 1)
+
+
