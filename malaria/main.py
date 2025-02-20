@@ -8,10 +8,25 @@ from tensorflow.keras.layers import Conv2D, MaxPool2D, Dense, Flatten, InputLaye
 from tensorflow.keras.losses import BinaryCrossentropy
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.metrics import RootMeanSquaredError
+from tensorflow.keras.models import load_model
+import os
+
+
+
 
 #LOADING DATASET AND SPLITTING INTO TRAIN VAL AND TEST
 
 dataset, dataset_info = tfds.load('malaria', with_info=True, as_supervised=True, shuffle_files=True, split=['train'])
+
+model_path = "malaria_model.h5"
+
+try:
+    lenet_model = load_model(model_path)
+    print("Model loaded successfully.")
+except Exception as e:
+    print(f"Model not found or could not be loaded: {e}")
+    print("Training the model from scratch...")
+
 
 def splits(dataset, TRAIN_RATIO, VAL_RATIO, TEST_RATIO):
     DATASET_SIZE = len(dataset)
@@ -63,6 +78,7 @@ BATCH_SIZE = 32
 
 train_dataset = train_dataset.shuffle(buffer_size = 8, reshuffle_each_iteration=True).batch(BATCH_SIZE).prefetch(tf.data.AUTOTUNE)
 val_dataset = val_dataset.shuffle(buffer_size = 8, reshuffle_each_iteration=True).batch(BATCH_SIZE).prefetch(tf.data.AUTOTUNE)
+test_dataset = test_dataset.batch(BATCH_SIZE).prefetch(tf.data.AUTOTUNE)
 
 
 #MODEL CREATION
@@ -102,9 +118,9 @@ lenet_model.compile(
 
 history = lenet_model.fit(train_dataset, validation_data=val_dataset, epochs = 20, verbose = 1)
 
+lenet_model.save("malaria_model.h5")
 
-
-plt.plot(history.history['val_loss'])
+plt.plot(history.history['loss'])
 plt.plot(history.history['val_loss'])
 plt.title('Model Loss')
 plt.ylabel('Loss')
@@ -132,7 +148,10 @@ def parasitized_or_not(x):
     else:
         return str('Uninfected')
 
-parasitized_or_not(lenet_model.predict(test_dataset.take(1)[0][0]))
+for images, labels in test_dataset.take(1):
+    preds = lenet_model.predict(images)
+    print("Prediction for first image:", parasitized_or_not(preds[0][0]))
+
 
 for i, (image, label) in enumerate(test_dataset.take(9)):
     ax = plt.subplot(3, 3, i + 1)
