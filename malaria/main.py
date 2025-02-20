@@ -8,11 +8,6 @@ from tensorflow.keras.layers import Conv2D, MaxPool2D, Dense, Flatten, InputLaye
 from tensorflow.keras.losses import BinaryCrossentropy
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.metrics import RootMeanSquaredError
-from tensorflow.python.client import device_lib
-
-#CHECK FOR GPU
-print(device_lib.list_local_devices())
-print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
 
 #LOADING DATASET AND SPLITTING INTO TRAIN VAL AND TEST
 
@@ -54,7 +49,7 @@ plt.show()
 #DATA PROCESSING
 IM_SIZE = 224
 def resize_rescale(image, label):
-    return tf.image.resize(image, (IM_SIZE, IM_SIZE))/ 225.0, label
+    return tf.image.resize(image, (IM_SIZE, IM_SIZE)) / 255.0, label
 
 train_dataset = train_dataset.map(resize_rescale)
 val_dataset = val_dataset.map(resize_rescale)
@@ -63,9 +58,12 @@ test_dataset = test_dataset.map(resize_rescale)
 for image,label in train_dataset.take(1):
     print(image, label)
 
+
 BATCH_SIZE = 32
-train_dataset = train_dataset.shuffle(buffer_size = 8, reshuffle_each_iteration=True).batch(32).prefetch(tf.data.AUTOTUNE)
-val_dataset = val_dataset.shuffle(buffer_size = 8, reshuffle_each_iteration=True).batch(32).prefetch(tf.data.AUTOTUNE)
+
+train_dataset = train_dataset.shuffle(buffer_size = 8, reshuffle_each_iteration=True).batch(BATCH_SIZE).prefetch(tf.data.AUTOTUNE)
+val_dataset = val_dataset.shuffle(buffer_size = 8, reshuffle_each_iteration=True).batch(BATCH_SIZE).prefetch(tf.data.AUTOTUNE)
+
 
 #MODEL CREATION
 
@@ -73,13 +71,19 @@ normalizer = Normalization()
 
 lenet_model = tf.keras.Sequential([
     InputLayer(input_shape = (IM_SIZE, IM_SIZE, 3)),
-    Conv2D(filters = 6, kernel_size=3, strides=1, padding='valid', activation='relu'),    
+
+    Conv2D(filters = 6, kernel_size=3, strides=1, padding='valid'),
     BatchNormalization(),
+    layers.Activation('relu'),
     MaxPool2D(pool_size = 2, strides = 2),
-    Conv2D(filters = 16, kernel_size=3, strides=1, padding='valid', activation='relu'),
+
+    Conv2D(filters = 16, kernel_size=3, strides=1, padding='valid'),
     BatchNormalization(),
+    layers.Activation('relu'),
     MaxPool2D(pool_size = 2, strides = 2),
+
     Flatten(),
+
     Dense(100, activation="relu"),
     BatchNormalization(),
     Dense(10, activation="relu"),
@@ -92,9 +96,48 @@ print(lenet_model.summary())
 lenet_model.compile(
     optimizer = Adam(learning_rate = 0.01),
     loss = BinaryCrossentropy(),
+    metrics= ['accuracy']
     #metric = RootMeanSquaredError()
 )
 
-history = lenet_model.fit(train_dataset, validation_data = val_dataset, epochs = 20, verbose = 1)
+history = lenet_model.fit(train_dataset, validation_data=val_dataset, epochs = 20, verbose = 1)
 
+
+
+plt.plot(history.history['val_loss'])
+plt.plot(history.history['val_loss'])
+plt.title('Model Loss')
+plt.ylabel('Loss')
+plt.xlabel('Epoch')
+plt.legend(['train_loss', 'val_loss'])
+
+
+plt.plot(history.history['accuracy'])
+plt.plot(history.history['val_accuracy'])
+plt.title('Model Accuracy')
+plt.ylabel('Accuracy')
+plt.xlabel('Epoch')
+plt.legend(['train_accuracy', 'val_accuracy'])
+
+
+plt.show()
+
+
+#MODEL EVAL
+print(lenet_model.evaluate(test_dataset))
+
+def parasitized_or_not(x):
+    if x < 0.5:
+        return str('Parisitized')
+    else:
+        return str('Uninfected')
+
+parasitized_or_not(lenet_model.predict(test_dataset.take(1)[0][0]))
+
+for i, (image, label) in enumerate(test_dataset.take(9)):
+    ax = plt.subplot(3, 3, i + 1)
+    plt.imshow(image[0])
+    plt.title(str(parasitized_or_not(label.numpy()[0])) + ":" + str(parasitized_or_not(lenet_model.predict(image)[0][0])))
+
+    plt.axis('off')
 
