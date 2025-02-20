@@ -140,4 +140,3 @@ for i, (image, label) in enumerate(test_dataset.take(9)):
     plt.title(str(parasitized_or_not(label.numpy()[0])) + ":" + str(parasitized_or_not(lenet_model.predict(image)[0][0])))
 
     plt.axis('off')
-
