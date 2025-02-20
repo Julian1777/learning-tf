@@ -8,8 +8,7 @@ from tensorflow.keras.layers import Conv2D, MaxPool2D, Dense, Flatten, InputLaye
 from tensorflow.keras.losses import BinaryCrossentropy
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.metrics import RootMeanSquaredError
-from tensorflow.keras.models import load_model
-import os
+
 
 
 
@@ -18,14 +17,6 @@ import os
 
 dataset, dataset_info = tfds.load('malaria', with_info=True, as_supervised=True, shuffle_files=True, split=['train'])
 
-model_path = "malaria_model.h5"
-
-try:
-    lenet_model = load_model(model_path)
-    print("Model loaded successfully.")
-except Exception as e:
-    print(f"Model not found or could not be loaded: {e}")
-    print("Training the model from scratch...")
 
 
 def splits(dataset, TRAIN_RATIO, VAL_RATIO, TEST_RATIO):
@@ -118,7 +109,6 @@ lenet_model.compile(
 
 history = lenet_model.fit(train_dataset, validation_data=val_dataset, epochs = 20, verbose = 1)
 
-lenet_model.save("malaria_model.h5")
 
 plt.plot(history.history['loss'])
 plt.plot(history.history['val_loss'])
