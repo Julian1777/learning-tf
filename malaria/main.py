@@ -4,10 +4,15 @@ import tensorflow
 import tensorflow_datasets as tfds
 import matplotlib.pyplot as plt
 from tensorflow.keras import datasets, layers, models, losses
-from tensorflow.keras.layers import Conv2D, MaxPool2D, Dense, Flatten, InputLayer, Normalization
+from tensorflow.keras.layers import Conv2D, MaxPool2D, Dense, Flatten, InputLayer, Normalization, BatchNormalization
 from tensorflow.keras.losses import BinaryCrossentropy
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.metrics import RootMeanSquaredError
+from tensorflow.python.client import device_lib
+
+#CHECK FOR GPU
+print(device_lib.list_local_devices())
+print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
 
 #LOADING DATASET AND SPLITTING INTO TRAIN VAL AND TEST
 
@@ -52,11 +57,15 @@ def resize_rescale(image, label):
     return tf.image.resize(image, (IM_SIZE, IM_SIZE))/ 225.0, label
 
 train_dataset = train_dataset.map(resize_rescale)
+val_dataset = val_dataset.map(resize_rescale)
+test_dataset = test_dataset.map(resize_rescale)
 
 for image,label in train_dataset.take(1):
     print(image, label)
 
+BATCH_SIZE = 32
 train_dataset = train_dataset.shuffle(buffer_size = 8, reshuffle_each_iteration=True).batch(32).prefetch(tf.data.AUTOTUNE)
+val_dataset = val_dataset.shuffle(buffer_size = 8, reshuffle_each_iteration=True).batch(32).prefetch(tf.data.AUTOTUNE)
 
 #MODEL CREATION
 
@@ -64,19 +73,17 @@ normalizer = Normalization()
 
 lenet_model = tf.keras.Sequential([
     InputLayer(input_shape = (IM_SIZE, IM_SIZE, 3)),
-
-    Conv2D(filters = 6, kernel_size=5, strides=1, padding='valid', activation='sigmoid'),
+    Conv2D(filters = 6, kernel_size=3, strides=1, padding='valid', activation='relu'),    
+    BatchNormalization(),
     MaxPool2D(pool_size = 2, strides = 2),
-
-    Conv2D(filters = 16, kernel_size=5, strides=1, padding='valid', activation='sigmoid'),
+    Conv2D(filters = 16, kernel_size=3, strides=1, padding='valid', activation='relu'),
+    BatchNormalization(),
     MaxPool2D(pool_size = 2, strides = 2),
-
     Flatten(),
-
-    Dense(100, activation="sigmoid"),
-
-    Dense(10, activation="sigmoid"),
-
+    Dense(100, activation="relu"),
+    BatchNormalization(),
+    Dense(10, activation="relu"),
+    BatchNormalization(),
     Dense(1, activation="sigmoid"),
 ])
 
@@ -88,6 +95,6 @@ lenet_model.compile(
     #metric = RootMeanSquaredError()
 )
 
-history = lenet_model.fit(train_dataset, validation_data=val_dataset, epochs = 100, verbose = 1)
+history = lenet_model.fit(train_dataset, validation_data = val_dataset, epochs = 20, verbose = 1)
 
 
