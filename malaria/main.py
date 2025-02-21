@@ -99,6 +99,8 @@ lenet_model = tf.keras.Sequential([
 ])
 
 print(lenet_model.summary())
+tf.keras.utils.plot_model(lenet_model, to_file='model.png', show_shapes = True)
+
 
 lenet_model.compile(
     optimizer = Adam(learning_rate = 0.01),
