@@ -1,4 +1,3 @@
-import kagglehub
 import tensorflow as tf
 import tensorflow
 import matplotlib.pyplot as plt
@@ -74,7 +73,7 @@ data_augmentation = tf.keras.Sequential([
     tf.keras.layers.RandomZoom(0.1),
 ])
 
-merged_ds_path = r"C:\Users\user\.cache\kagglehub\datasets\merged_datasets\data"
+merged_ds_path = os.path.join("dataset", "merged_data")
 
 
 print("Path to dataset:", merged_ds_path)
