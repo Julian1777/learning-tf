@@ -26,6 +26,7 @@ all_lines_image = lane_color.copy()
 
 if lines is not None:
     for line in lines:
+        print(f"Hough detected {len(lines) if lines is not None else 0} lines")
         x1, y1, x2, y2 = line[0]
         cv.line(all_lines_image, (x1, y1), (x2, y2), (0, 0, 255), 2)
 
@@ -44,18 +45,21 @@ if lines is not None:
             
         slope = (y2 - y1) / (x2 - x1)
         
-        if abs(slope) < 0.3 or abs(slope) > 5.0:
+        if abs(slope) < 0.15 or abs(slope) > 10.0:
             continue
         
         bottom_y = max(y1, y2)
         bottom_x = x1 if y1 > y2 else x2
-
+        print(f"Left candidates: {len(left_candidates)}")
+        print(f"Right candidates: {len(right_candidates)}")
         mid_x = (x1 + x2) / 2
 
-        if slope < 0 and width*0.3 < bottom_x < width*0.5:
+        if slope < 0 and width*0.2 < bottom_x < width*0.55:
             left_candidates.append(line)
-        elif slope > 0 and width*0.5 < bottom_x < width*0.7:
+        elif slope > 0 and width*0.45 < bottom_x < width*0.8:
             right_candidates.append(line)
+
+        
 
 current_lane_image = lane_color.copy()
 
@@ -86,6 +90,36 @@ if best_left_line is not None:
 if best_right_line is not None:
     x1, y1, x2, y2 = best_right_line[0]
     cv.line(current_lane_image, (x1, y1), (x2, y2), (0, 255, 0), 4)  # Right boundary in green
+
+
+if lines is not None:
+    rejected_by_slope = 0
+    rejected_by_position = 0
+    for line in lines:
+        x1, y1, x2, y2 = line[0]
+        
+        if x2 == x1:
+            continue
+            
+        slope = (y2 - y1) / (x2 - x1)
+        
+        if abs(slope) < 0.3 or abs(slope) > 5.0:
+            rejected_by_slope += 1
+            continue
+        
+        bottom_y = max(y1, y2)
+        bottom_x = x1 if y1 > y2 else x2
+        
+        # Check if the line would be rejected by position
+        if slope < 0:
+            if not (width*0.3 < bottom_x < width*0.5):
+                rejected_by_position += 1
+        else:  # slope > 0
+            if not (width*0.5 < bottom_x < width*0.7):
+                rejected_by_position += 1
+    
+    print(f"Rejected by slope: {rejected_by_slope}")
+    print(f"Rejected by position: {rejected_by_position}")
 
 cv.namedWindow('All Detected Lines')
 cv.namedWindow('Your Lane Boundaries')
