@@ -2,6 +2,8 @@ import cv2 as cv
 import numpy as np
 
 
+#Function to set the region of interest on the image
+#Opencv uses left to right 0 - 100% and left top to bottom left 0-100%
 def region_of_interest(img):
     mask = np.zeros_like(img)
     polygon = np.array([[
@@ -12,7 +14,9 @@ def region_of_interest(img):
         (width*0.92, height*0.75),      # Mid-right point
         (width, height)            # Bottom right
     ]], dtype=np.int32)
+    #Fill the polygon created above
     cv.fillPoly(mask, polygon, 255)
+    #Apply the mask (ROI) to the image
     masked_image = cv.bitwise_and(img, mask)
     return masked_image, polygon
 
