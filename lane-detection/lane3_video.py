@@ -15,8 +15,8 @@ def roi(image):
     polygon = np.array([[
         (0, height),           # Bottom left
         (0, height*0.8),     # Mid-left point
-        (width*0.47, height*0.5),      # Top left
-        (width*0.57, height*0.5),      # Top right
+        (width*0.47, height*0.65),      # Top left
+        (width*0.57, height*0.65),      # Top right
         (width, height*0.76),      # Mid-right point
         (width, height)            # Bottom right
     ]], dtype=np.int32)
@@ -27,7 +27,7 @@ def roi(image):
 
 def filter_lanes(lines, image_width):
     if lines is None:
-        return None, None
+        return None, None, None
     left_lines = []
     right_lines = []
 
@@ -39,9 +39,9 @@ def filter_lanes(lines, image_width):
         slope = (y2 - y1) / (x2 - x1)
         mid_x = (x1 + x2) / 2
 
-        if slope < 0 and mid_x < image_width * 0.7:
+        if slope < 0 and mid_x > image_width * 0.5 and mid_x < image_width * 0.5:
             left_lines.append(line)
-        elif slope > 0 and mid_x > image_width * 0.3:
+        elif slope > 0 and mid_x > image_width * 0.7:
             right_lines.append(line) 
 
     return left_lines, right_lines
@@ -49,30 +49,22 @@ def filter_lanes(lines, image_width):
 def make_coordinates(image,line_parameters):
     slope,intercept=line_parameters
     y1=image.shape[0]
-    y2=int(y1*(3/5))
+    y2=int(y1*0.8)
     x1=int((y1-intercept)/slope)
     x2=int((y2-intercept)/slope)
     return np.array([x1,y1,x2,y2])
 
+prev_right_fit_average = np.array([-0.5, 300])
+prev_left_fit_average = np.array([0.5, -50])
+
 def fit_lane(image, lines):
     global prev_left_fit_average, prev_right_fit_average
-    left_fit=[]
-    right_fit=[]
-    for line in lines:
-        x1,y1,x2,y2=line.reshape(4)
-        parameters=np.polyfit((x1,x2),(y1,y2),1)
-        slope=parameters[0]
-        intercept=parameters[1]
-        if slope<0:
-            left_fit.append((slope,intercept))
-        else:
-            right_fit.append((slope,intercept))        
 
     if lines is None:
         left_line = make_coordinates(image, prev_left_fit_average)
         right_line = make_coordinates(image, prev_right_fit_average)
         return np.array([left_line, right_line])
-        
+
     left_fit = []
     right_fit = []
     
@@ -110,12 +102,13 @@ def fit_lane(image, lines):
         right_line = make_coordinates(image, prev_right_fit_average)
         
     return np.array([left_line, right_line])
+
  
 def display_lines(image,lines):
     line_image=np.zeros_like(image)
     if lines is not None:
         for x1,y1,x2,y2 in lines:
-            cv.line(line_image,(x1,y1),(x2,y2),(255,0,100),12)
+            cv.line(line_image,(x1,y1),(x2,y2),(255,0,0),8)
 
     return line_image
 
@@ -138,15 +131,26 @@ while(cap.isOpened()):
         maxLineGap=5
     )
 
-    averaged_lines = fit_lane(frame, lines)
+    left_lines, right_lines = filter_lanes(lines, width)
+    
+    left_right_lanes = fit_lane(frame, lines)
+    center_lane = None
 
-    line_image = display_lines(frame, averaged_lines)
+    line_image = np.zeros_like(frame)
+
+    if left_right_lanes is not None and len(left_right_lanes) > 0:
+        x1, y1, x2, y2 = left_right_lanes[0]
+        cv.line(line_image, (x1, y1), (x2, y2), (0, 255, 0), 8)  # Green
+    
+    if left_right_lanes is not None and len(left_right_lanes) > 1:
+        x1, y1, x2, y2 = left_right_lanes[1]
+        cv.line(line_image, (x1, y1), (x2, y2), (0, 0, 255), 8)  # Red
     
     combo_image = cv.addWeighted(frame, 0.9, line_image, 1, 1)
 
     cv.imshow('result',combo_image)
-    cv.imshow('cannyImage', canny_image)
-    cv.imshow("ROI-Image", cropped_image)
+    roi_resized = cv.resize(cropped_image, (510, 510))
+    cv.imshow("ROI-Image", roi_resized)
     if cv.waitKey(1) & 0xFF==27:
         break
 cap.release()
