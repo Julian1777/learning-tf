@@ -110,7 +110,43 @@ else:
     processed_data = process_dataset()
 
 
+def create_unet_model(input_shape(224, 224, 3)):
+    #Defines the input layer. 224 pixels in height 224 pixels in width and 3 channels for RGB
+    inputs = tf.keras.Input(shape=input_shape)
 
+    #This layer learns 64 different features (edges, lines, etc) in a 3x3 grid which is the kernel
+    #The relu acvitation is applied to make the model non-linear
+    #The padding makes sure the size of the output stays the same
+    conv1 = layers.Conv2D(64, 3, activation='relu', padding='same')(inputs)
+
+    #We do the conv layer twice here to extract more features
+    conv1 = layers.Conv2D(64, 3, activation='relu', padding='same')(conv1)
+
+    #Max pooling will shrink the image by a factor of 2 taking the minimum value of each 2x2 grid
+    pool1 = layers.MaxPooling2D(pool_size=(2, 2))(conv1)
+
+    #More conv layers this time 128 filters meaning even more features are extracted
+    conv2 = layers.Conv2D(128, 3, activation='relu', padding='same')(pool1)
+
+    #Same again we extract even more after the conv2 layer above
+    conv2 = layers.Conv2D(128, 3, activation='relu', padding='same')(conv2)
+    pool2 = layers.MaxPooling2D(pool_size=(2, 2))(conv2)
+
+    conv3 = layers.Conv2D(256, 3, activation='relu', padding='same')(pool2)
+
+    conv3 = layers.Conv2D(256, 3, activation='relu', padding='same')(conv3)
+    pool3 = layers.MaxPooling2D(pool_size=(2, 2))(conv3)
+
+    conv4 = layers.Conv2D(512, 3, activation='relu', padding='same')(pool3)
+
+    conv4 = layers.Conv2D(512, 3, activation='relu', padding='same')(conv4)
+
+    #The same process is repeated over and over to get the most amount of features from an input
+
+    #STILL NEEDS DECODING
+
+
+    return model
 
 DATASET_PATH = processed_data["images_dir"]
 print(f"Updated DATASET_PATH to: {DATASET_PATH}")
