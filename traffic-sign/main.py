@@ -48,8 +48,9 @@ def load_model_if_valid(model_path="traffic_sign_model.h5", hash_path="model_has
 
 def preprocess_image(image_path):
     img = cv.imread(image_path)
+    img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
     img = cv.resize(img, (224, 224))
-    img = img / 255.0
+    img = img.astype(np.float32)
     img = np.expand_dims(img, axis=0)
     return img
 
@@ -198,21 +199,12 @@ if not model:
 
 
 plt.figure(figsize=(10, 10))
-for images, labels in train_val_ds.take(1):
-    for i in range(16):
-        ax = plt.subplot(4, 4, i+1)
-        plt.imshow((images[i].numpy() * 255).astype("uint8"))
-        plt.title(ordered_descriptions[labels[i]])
-        plt.axis("off")
-plt.tight_layout()
-
-plt.figure(figsize=(10, 10))
 for images, labels in val_ds.take(1):  
     predictions = model.predict(images)
     predicted_classes = tf.argmax(predictions, axis=1)
     for i in range(16):
         ax = plt.subplot(4, 4, i+1)
-        plt.imshow((images[i].numpy() * 255).astype("uint8")) 
+        plt.imshow((images[i].numpy()).astype("uint8")) 
         plt.title(f"True: {ordered_descriptions[labels[i]]}\nPred: {ordered_descriptions[predicted_classes[i]]}")
         plt.axis("off")
 plt.tight_layout()
