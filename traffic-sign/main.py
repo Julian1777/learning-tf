@@ -213,6 +213,6 @@ plt.show()
 
 #TEST IMAGE PREDICTION
 
-image_path = "test_image_30kmh.jpg"
+image_path = os.path.join("images", "test_image_30kmh.jpg")
 result = predict(image_path)
 print(f"Predicted class: {result}")

@@ -3,9 +3,10 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras.models import load_model
 import pandas as pd
+import os
 
 model = load_model("traffic_sign_model.h5")
-csv_path = r"C:\Users\user\.cache\kagglehub\datasets\merged_datasets\data\global_labels.csv"
+csv_path = os.path.jon("dataset", "merged_data", "global_labels.csv")
 
 
 def load_ordered_descriptions(csv_path):
