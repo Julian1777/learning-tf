@@ -1,11 +1,14 @@
 import tensorflow as tf
 from tensorflow.keras import layers
 from tensorflow.keras.models import load_model
+from tensorflow.keras.callbacks import EarlyStopping
 import cv2 as cv
 import numpy as np
 import os
 import shutil
 from tqdm import tqdm
+import matplotlib.pyplot as plt
+
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 CULANE_DIR = os.path.join(SCRIPT_DIR, "dataset", "culane")
@@ -21,11 +24,13 @@ os.makedirs(ANNOTATIONS_DIR, exist_ok=True)
 
 
 IMG_SIZE = (224, 224)
-BATCH_SIZE = 128
+BATCH_SIZE = 8
 SEED = 123
-EPOCHS = 10
+EPOCHS = 30
 
-
+gpus = tf.config.list_physical_devices('GPU')
+if gpus:
+    tf.config.experimental.set_memory_growth(gpus[0], True)
 
 #Later for test images
 def img_preprocessing(image_path):
@@ -35,6 +40,48 @@ def img_preprocessing(image_path):
     img = np.expand_dims(img, axis=0)
     return img
 
+def iou_metric(y_true, y_pred):
+    y_true_f = tf.reshape(y_true, [-1])
+    y_pred_f = tf.reshape(y_pred, [-1])
+    
+    intersection = tf.reduce_sum(tf.multiply(y_true_f, y_pred_f))
+    
+    union = tf.reduce_sum(y_true_f) + tf.reduce_sum(y_pred_f) - intersection
+    
+    iou = intersection / (union + tf.keras.backend.epsilon())
+    
+    return iou
+
+def visualize_predictions(model, dataset, num_images=3):
+    """
+    Visualizes predictions against true masks.
+    """
+    for i, (images, masks) in enumerate(dataset.take(num_images)):
+        pred_masks = model.predict(images)
+
+        pred_masks = (pred_masks > 0.5).astype("float32")
+
+        plt.figure(figsize=(12, 4))
+        for j in range(num_images):
+            # Image
+            plt.subplot(1, 3, 1)
+            plt.imshow(images[j])
+            plt.title("Image")
+            plt.axis('off')
+
+            # Ground truth mask
+            plt.subplot(1, 3, 2)
+            plt.imshow(masks[j])
+            plt.title("True Mask")
+            plt.axis('off')
+
+            # Predicted mask
+            plt.subplot(1, 3, 3)
+            plt.imshow(pred_masks[j])
+            plt.title("Predicted Mask")
+            plt.axis('off')
+
+        plt.show()
 
 def load_image_mask_pair(image_path, mask_path):
     image = tf.io.read_file(image_path)
@@ -279,18 +326,52 @@ model = create_unet_model()
 model.compile(
     optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4), 
     loss='binary_crossentropy', 
-    metrics=['accuracy', tf.keras.metrics.IoU(num_classes=2, target_class_ids=[1])]
+    metrics=[iou_metric]
 )
 
 if os.path.exists(MODEL_PATH):
     print(f"Loading existing model from {MODEL_PATH}")
     model = load_model(MODEL_PATH)
 else:
+    early_stopping = EarlyStopping(monitor='val_loss', patience=3, restore_best_weights=True)
     print("No existing model found. Training a new model.")
+
+    checkpoint = tf.keras.callbacks.ModelCheckpoint(
+    "best_model.h5",
+    monitor="val_iou_metric",
+    mode="max",
+    save_best_only=True,
+    verbose=1
+    )
     history = model.fit(
         train_ds,
         validation_data = val_ds,
         epochs = EPOCHS,
+        callbacks=[early_stopping, checkpoint]
     )
 
     model.save("lane_detection_model.h5")
+    visualize_predictions(model, val_ds)
+
+# Plotting loss, accuracy, and IoU for both train and validation sets
+plt.figure(figsize=(16, 6))
+
+# Loss
+plt.subplot(1, 2, 1)
+plt.plot(history.history['loss'], label='Train Loss')
+plt.plot(history.history['val_loss'], label='Val Loss')
+plt.title('Loss over Epochs')
+plt.xlabel('Epochs')
+plt.ylabel('Loss')
+plt.legend()
+
+# IoU
+plt.subplot(1, 2, 2)
+plt.plot(history.history['iou_metric'], label='Train IoU')
+plt.plot(history.history['val_iou_metric'], label='Val IoU')
+plt.title('IoU over Epochs')
+plt.xlabel('Epochs')
+plt.ylabel('IoU')
+plt.legend()
+
+plt.show()
