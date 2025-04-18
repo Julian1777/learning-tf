@@ -331,9 +331,12 @@ model.compile(
 
 if os.path.exists(MODEL_PATH):
     print(f"Loading existing model from {MODEL_PATH}")
-    model = load_model(MODEL_PATH)
+    model = load_model(
+        MODEL_PATH,
+        custom_objects={'iou_metric': iou_metric}
+    )
 else:
-    early_stopping = EarlyStopping(monitor='val_loss', patience=3, restore_best_weights=True)
+    early_stopping = EarlyStopping(monitor='val_loss', patience=6, restore_best_weights=True)
     print("No existing model found. Training a new model.")
 
     checkpoint = tf.keras.callbacks.ModelCheckpoint(
@@ -353,25 +356,47 @@ else:
     model.save("lane_detection_model.h5")
     visualize_predictions(model, val_ds)
 
-# Plotting loss, accuracy, and IoU for both train and validation sets
-plt.figure(figsize=(16, 6))
+    # Plotting loss, accuracy, and IoU for both train and validation sets
+    plt.figure(figsize=(16, 6))
 
-# Loss
+    # Loss
+    plt.subplot(1, 2, 1)
+    plt.plot(history.history['loss'], label='Train Loss')
+    plt.plot(history.history['val_loss'], label='Val Loss')
+    plt.title('Loss over Epochs')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.legend()
+
+    # IoU
+    plt.subplot(1, 2, 2)
+    plt.plot(history.history['iou_metric'], label='Train IoU')
+    plt.plot(history.history['val_iou_metric'], label='Val IoU')
+    plt.title('IoU over Epochs')
+    plt.xlabel('Epochs')
+    plt.ylabel('IoU')
+    plt.legend()
+
+    plt.show()
+
+
+test_image_path = "lane3.jpg"
+test_image = img_preprocessing(test_image_path)
+
+pred_mask = model.predict(test_image)[0]
+
+binary_mask = (pred_mask > 0.5).astype(np.uint8)
+
+plt.figure(figsize=(12, 6))
+
+original_image = tf.keras.preprocessing.image.load_img(test_image_path)
 plt.subplot(1, 2, 1)
-plt.plot(history.history['loss'], label='Train Loss')
-plt.plot(history.history['val_loss'], label='Val Loss')
-plt.title('Loss over Epochs')
-plt.xlabel('Epochs')
-plt.ylabel('Loss')
-plt.legend()
+plt.imshow(original_image)
+plt.title("Original Image")
 
-# IoU
 plt.subplot(1, 2, 2)
-plt.plot(history.history['iou_metric'], label='Train IoU')
-plt.plot(history.history['val_iou_metric'], label='Val IoU')
-plt.title('IoU over Epochs')
-plt.xlabel('Epochs')
-plt.ylabel('IoU')
-plt.legend()
+plt.imshow(binary_mask[..., 0], cmap='gray')
+plt.title("Predicted Mask")
 
+plt.tight_layout()
 plt.show()
