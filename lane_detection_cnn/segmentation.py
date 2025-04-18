@@ -1,7 +1,7 @@
 import tensorflow as tf
 from tensorflow.keras import layers
 from tensorflow.keras.models import load_model
-from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 import cv2 as cv
 import numpy as np
 import os
@@ -336,21 +336,36 @@ if os.path.exists(MODEL_PATH):
         custom_objects={'iou_metric': iou_metric}
     )
 else:
-    early_stopping = EarlyStopping(monitor='val_loss', patience=6, restore_best_weights=True)
+
+    early_stopping = EarlyStopping(
+        monitor='val_iou_metric',
+        patience=10,
+        restore_best_weights=True
+    )
+
+    reduce_lr = ReduceLROnPlateau(
+        monitor='val_iou_metric',
+        mode='max',
+        factor=0.5,
+        patience=6,
+        verbose=1,
+        min_lr=1e-6
+    )
     print("No existing model found. Training a new model.")
 
     checkpoint = tf.keras.callbacks.ModelCheckpoint(
-    "best_model.h5",
-    monitor="val_iou_metric",
-    mode="max",
-    save_best_only=True,
-    verbose=1
+        "best_model.h5",
+        monitor="val_iou_metric",
+        mode="max",
+        save_best_only=True,
+        verbose=1
     )
+        
     history = model.fit(
         train_ds,
         validation_data = val_ds,
         epochs = EPOCHS,
-        callbacks=[early_stopping, checkpoint]
+        callbacks=[early_stopping, checkpoint, reduce_lr]
     )
 
     model.save("lane_detection_model.h5")
