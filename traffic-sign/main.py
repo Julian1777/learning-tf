@@ -11,6 +11,12 @@ import pandas as pd
 from tensorflow.keras import layers
 
 
+BATCH_SIZE = 128
+IMG_SIZE = (224,224)
+SEED = 123
+EPOCHS = 50
+
+
 print("GPU Available:", tf.config.list_physical_devices('GPU'))
 gpus = tf.config.experimental.list_physical_devices('GPU')
 if gpus:
@@ -74,18 +80,16 @@ data_augmentation = tf.keras.Sequential([
     tf.keras.layers.RandomZoom(0.1),
 ])
 
-merged_ds_path = os.path.join("dataset", "merged_data")
+ds_path = os.path.join("dataset", "Train")
 
 
-print("Path to dataset:", merged_ds_path)
+print("Path to dataset:", ds_path)
 
 
 
-BATCH_SIZE = 128
-IMG_SIZE = (224,224)
-SEED = 123
+
 train_val_ds = tf.keras.preprocessing.image_dataset_from_directory(
-    merged_ds_path,
+    ds_path,
     batch_size=BATCH_SIZE,
     image_size=IMG_SIZE,
     shuffle=True,
@@ -95,7 +99,7 @@ train_val_ds = tf.keras.preprocessing.image_dataset_from_directory(
 )
 
 val_test_ds = tf.keras.preprocessing.image_dataset_from_directory(
-    merged_ds_path,
+    ds_path,
     batch_size=BATCH_SIZE,
     image_size=IMG_SIZE,
     shuffle=True,
@@ -104,7 +108,7 @@ val_test_ds = tf.keras.preprocessing.image_dataset_from_directory(
     seed=SEED
 )
 
-class_names = load_class_names(os.path.join(merged_ds_path, "global_labels.csv"))
+class_names = load_class_names(os.path.join("dataset", "sign_dic.csv"))
 print(class_names)
 
 num_classes = len(train_val_ds.class_names)
@@ -172,7 +176,7 @@ if not model:
     history = model.fit(
         train_val_ds,
         validation_data=val_ds,
-        epochs=50,
+        epochs=EPOCHS,
         verbose=1,
         class_weight=class_weights
     )
