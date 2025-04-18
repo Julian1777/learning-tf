@@ -1,2 +1,4 @@
 *.mov
+*.h5
 lane_detection_cnn/dataset/
+traffic-sign/dataset/
