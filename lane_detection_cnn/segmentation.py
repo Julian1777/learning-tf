@@ -360,12 +360,12 @@ else:
         save_best_only=True,
         verbose=1
     )
-        
+    #Removed earlystopping for now
     history = model.fit(
         train_ds,
         validation_data = val_ds,
         epochs = EPOCHS,
-        callbacks=[early_stopping, checkpoint, reduce_lr]
+        callbacks=[checkpoint, reduce_lr]
     )
 
     model.save("lane_detection_model.h5")
