@@ -162,6 +162,37 @@ def process_dataset(dataset):
                 out_file.writelines(merged_annotation_lines)
 
 
+def visualize_predictions(model, dataset, num_images=4):
+    """
+    Visualizes predictions against true masks.
+    """
+    for i, (images, masks) in enumerate(dataset.take(num_images)):
+        pred_masks = model.predict(images)
+
+        pred_masks = (pred_masks > 0.5).astype("float32")
+
+        plt.figure(figsize=(12, 4))
+        for j in range(num_images):
+            # Image
+            plt.subplot(1, 3, 1)
+            plt.imshow(images[j])
+            plt.title("Image")
+            plt.axis('off')
+
+            # Ground truth mask
+            plt.subplot(1, 3, 2)
+            plt.imshow(masks[j])
+            plt.title("True Mask")
+            plt.axis('off')
+
+            # Predicted mask
+            plt.subplot(1, 3, 3)
+            plt.imshow(pred_masks[j])
+            plt.title("Predicted Mask")
+            plt.axis('off')
+
+        plt.show()
+
 #Only for testing images/predictions
 def process_image(image_path):
     image = tf.keras.preprocessing.image.load_img(image_path, target_size=IMG_SIZE)
@@ -222,4 +253,75 @@ print(f"Train dataset size: {len(train_ds)} batches")
 print(f"Validation dataset size: {len(val_ds)} batches")
 print(f"Test dataset size: {len(test_ds)} batches")
 
+model = tf.keras.Sequental([
+    tf.keras.layers.Input(shape=(224, 224, 3)),
+
+    #Data augmentation later on
+
+    tf.keras.layers.Conv2D(32, (3,3), activation='relu'),
+    tf.keras.layers.MaxPooling2D(2,2),
+
+    tf.keras.layers.Conv2D(64, (3,3), activation='relu'),
+    tf.keras.layers.MaxPooling2D(2,2),
+
+    tf.keras.layers.Conv2D(128, (3,3), activation='relu'),
+    tf.keras.layers.MaxPooling2D(2,2),
+
+    tf.keras.layers.Flatten(),
+    tf.keras.layers.Dense(128, activation='relu'),
+
+    tf.keras.layers.Dense(5, activation='softmax', dtype='float32')
+])
+
+print(model.summary())
+
+if not os.path.exists("traffic_light.h5"):
+
+    checkpoint = tf.keras.callbacks.ModelCheckpoint(
+        "best_model.h5",
+        monitor="accuracy",
+        mode="max",
+        save_best_only=True,
+        verbose=1
+    )
+
+    model.compile(
+        optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
+        loss=tf.keras.losses.SparseCategoricalCrossentropy(),
+        metrics=['accuracy']
+    )
+
+    history = model.fit(
+        full_dataset,
+        validation_data=val_ds,
+        epochs=EPOCHS,
+        verbose=1,
+        callbacks=[checkpoint]
+    )
+
+    model.save("lane_detection_model.h5")
+    visualize_predictions(model, val_ds)
+
+    plt.figure(figsize=(12, 4))
+    plt.subplot(1, 2, 1)
+    plt.plot(history.history['loss'], label='Train Loss')
+    plt.plot(history.history['val_loss'], label='Val Loss')
+    plt.title('Loss')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.legend()
+    plt.subplot(1, 2, 2)
+    plt.plot(history.history['accuracy'], label='Train Accuracy')
+    plt.plot(history.history['val_accuracy'], label='Val Accuracy')
+    plt.title('Accuracy')
+    plt.xlabel('Epoch')
+    plt.ylabel('Accuracy')
+    plt.legend()
+    plt.show()
+
+
+else:
+    model = tf.keras.models.load_model("traffic_light.h5")
+    print("Model loaded successfully.")
+    visualize_predictions(model, val_ds)
 
