@@ -8,7 +8,7 @@ import csv
 BATCH_SIZE = 32
 IMG_SIZE = (224,224)
 SEED = 123
-EPOCHS = 10
+EPOCHS = 30
 
 ORIGINAL_DS_DIR = "lisa_dataset"
 DS_DIR = "dataset"
@@ -253,7 +253,7 @@ print(f"Train dataset size: {len(train_ds)} batches")
 print(f"Validation dataset size: {len(val_ds)} batches")
 print(f"Test dataset size: {len(test_ds)} batches")
 
-model = tf.keras.Sequental([
+model = tf.keras.Sequential([
     tf.keras.layers.Input(shape=(224, 224, 3)),
 
     #Data augmentation later on
